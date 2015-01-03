@@ -23,8 +23,6 @@
 #include "LED_Matrix.h"
 #include "Adafruit_GFX.h"
 
-// Direct addressing PWM classes use a timer to scan pixels
-#include "TimerOne.h"
 
 static const uint16_t alphafonttable[] PROGMEM =  {
 
@@ -168,36 +166,77 @@ static const uint16_t alphafonttable[] PROGMEM =  {
 // (volatile is required for ISRs)
 volatile uint8_t DirectMatrix_ARRAY_ROWS;
 volatile uint8_t DirectMatrix_ARRAY_COLS;
-volatile uint8_t *DirectMatrix_MATRIX;
+volatile uint16_t *DirectMatrix_MATRIX;
 // These go to ground:
-volatile uint8_t *DirectMatrix_ROW_PINS;
+volatile GPIO_pin_t *DirectMatrix_ROW_PINS;
 // Those go to V+
-volatile uint8_t *DirectMatrix_COL_PINS;
+volatile GPIO_pin_t *DirectMatrix_COL_PINS;
+// Shift Register Pins that also go to V+
+volatile GPIO_pin_t *DirectMatrix_SR_PINS;
+// How many colors in the array
+volatile uint8_t DirectMatrix_NUM_COLORS;
+volatile uint32_t DirectMatrix_ISR_runtime;
+volatile uint32_t DirectMatrix_ISR_latency;
+
 
 // ISR to refresh one matrix line
 // This must be fast since it blocks interrupts and can only use globals.
+// runtime: 
+// - 268ns with 8 direct and 8 via SR (92 + 176) (arduino digitalwrite)
+// - 136ns with 8 direct and 8 via SR (56 +  80) (digitalwrite2)
+// - 108ns with 8 direct and 8 via SR (48 +  60) (digitalwrite2f)
+// TODO:
+// redo PWM by 
+// 1) for 4 bits of intensity, be called at 400ns 800ns 1600ns and 3200ns (4 times) and turn on or off
+// 2) to save some time with changing rows do each line first before switching to the next line?
+// (allows leaving the line on while turning row pixels on or off)
 void DirectMatrix_RefreshPWMLine(void) {
+    static uint32_t time = micros();
     static uint8_t row = 0;
     static uint8_t pwm = 1;
     int8_t oldrow = row - 1;
+    int16_t colormask = 0xF;
+    int8_t col_pin_offset = 0;
+    uint16_t pwm_shifted = pwm;
+
+    // Record latency between 2 calls
+    DirectMatrix_ISR_latency = micros() - time;
+    time = micros();
 
     if (row == 0) oldrow = DirectMatrix_ARRAY_ROWS - 1;
     // Before setting the columns, shut off the previous row
     digitalWrite(DirectMatrix_ROW_PINS[oldrow], HIGH);
 
-    // TODO: detect that pin0 is -1 and switch to SR mode
-    // TODO: scan matrix 2nd sets of colors and populate 2nd array
-    for (int8_t col = DirectMatrix_ARRAY_COLS - 1; col >= 0; col--)
+    for (int8_t color = 0; color < DirectMatrix_NUM_COLORS; color++)
     {
-	if (DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] >= pwm)
+	// If no SR is defined for this color, direct color mapping
+	if (DirectMatrix_SR_PINS[color] == DINV)
 	{
-	    digitalWrite(DirectMatrix_COL_PINS[col], HIGH);
+	    for (int8_t col = 0; col <= DirectMatrix_ARRAY_COLS - 1; col++)
+	    {
+		digitalWrite(DirectMatrix_COL_PINS[col + col_pin_offset],
+		    ((DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] &
+		      colormask) >= pwm_shifted)?HIGH:LOW);
+	    }
 	}
 	else
 	{
-	    digitalWrite(DirectMatrix_COL_PINS[col], LOW);
+	    digitalWrite(DirectMatrix_SR_PINS[color], LOW);
+	    for (int8_t col = 0; col <= DirectMatrix_ARRAY_COLS - 1; col++)
+	    {
+		digitalWrite(DirectMatrix_SR_PINS[CLK], LOW);
+		digitalWrite(DirectMatrix_SR_PINS[DATA], 
+		    ((DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] &
+		      colormask) >= pwm_shifted)?HIGH:LOW);
+		digitalWrite(DirectMatrix_SR_PINS[CLK], HIGH);
+	    }
+	    digitalWrite(DirectMatrix_SR_PINS[color], HIGH);
 	}
+	colormask <<= 4;
+	pwm_shifted <<= 4;
+	col_pin_offset += DirectMatrix_ARRAY_COLS;
     }
+
     // Now that the colums are set, turn the row on
     digitalWrite(DirectMatrix_ROW_PINS[row], LOW);
 
@@ -208,17 +247,23 @@ void DirectMatrix_RefreshPWMLine(void) {
 	pwm++;
 	if (pwm > DirectMatrix_PWM_LEVELS) pwm = 1;
     }
+
+    // Record how long the function took
+    DirectMatrix_ISR_runtime = micros() - time;
+    time = micros();
 }
 
-DirectMatrix::DirectMatrix(uint8_t num_rows, uint8_t num_cols) {
+DirectMatrix::DirectMatrix(uint8_t num_rows, uint8_t num_cols, 
+	uint8_t num_colors) {
     _num_rows = num_rows;
     _num_cols = num_cols;
 
     // These need to be global so that the ISR can get to them.
     DirectMatrix_ARRAY_ROWS = num_rows;
     DirectMatrix_ARRAY_COLS = num_cols;
+    DirectMatrix_NUM_COLORS = num_colors;
 
-    if (! (_matrix = (uint8_t *) malloc(num_rows * num_cols)))
+    if (! (_matrix = (uint16_t *) malloc(num_rows * num_cols * 2)))
     {
 	while (1) {
 	    Serial.println(F("Malloc failed in DirectMatrix::DirectMatrix"));
@@ -228,13 +273,16 @@ DirectMatrix::DirectMatrix(uint8_t num_rows, uint8_t num_cols) {
 }
 
 // Array of of pins for vertical lines, and columns.
-void DirectMatrix::begin(uint8_t __row_pins[], uint8_t __col_pins[]) {
+void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[], 
+	GPIO_pin_t __sr_pins[]) {
     _row_pins = __row_pins;
     _col_pins = __col_pins;
+    _sr_pins = __sr_pins;
 
     // These need to be global so that the ISR can get to them
     DirectMatrix_ROW_PINS = _row_pins;
     DirectMatrix_COL_PINS = _col_pins;
+    DirectMatrix_SR_PINS = _sr_pins;
 
     // Init the lines and cols with the opposite voltage to turn them off.
     for (uint8_t i = 0; i < _num_rows; i++)
@@ -247,11 +295,30 @@ void DirectMatrix::begin(uint8_t __row_pins[], uint8_t __col_pins[]) {
 	pinMode(_col_pins[i], OUTPUT);
 	digitalWrite(_col_pins[i], LOW);
     }
+    
+    // Setup SR pins if any.
+    for (uint8_t pin = 0; pin < 3; pin++)
+    {
+	if (_sr_pins[pin] == 255) continue;
+	pinMode(_sr_pins[pin], OUTPUT);
+	pinMode(_sr_pins[DATA], OUTPUT);
+	pinMode(_sr_pins[CLK], OUTPUT);
+	digitalWrite(_sr_pins[pin], LOW);
+	for (uint8_t i = 0; i <= _num_rows; i++)
+	{
+	    digitalWrite(_sr_pins[CLK], LOW);
+	    digitalWrite(_sr_pins[DATA], i & 1);
+	    digitalWrite(_sr_pins[CLK], HIGH);
+	}
+	digitalWrite(_sr_pins[pin], HIGH);
+    }
 
     // We want 40Hz refresh at lowest intensity  
     // x 8 rows x 7 levels of intensity -> 2240Hz or 446us
     // TODO: dynamically calculate the ISR frequency based
-    // on the matrix size (and number of colors).
+    // on the matrix size)
+    // 400 isn't long enough to make full colors, 1000+ is better
+    // but it makes PWM colors blink
     Timer1.initialize(400);
     Timer1.attachInterrupt(DirectMatrix_RefreshPWMLine);
 }
@@ -266,8 +333,15 @@ void DirectMatrix::clear(void) {
   }
 }
 
-PWMDirectMatrix::PWMDirectMatrix(uint8_t rows, uint8_t cols) : 
-    DirectMatrix(rows, cols), Adafruit_GFX(rows, cols) {
+uint32_t DirectMatrix::ISR_runtime(void) {
+  return DirectMatrix_ISR_runtime;
+}
+uint32_t DirectMatrix::ISR_latency(void) {
+  return DirectMatrix_ISR_latency;
+}
+
+PWMDirectMatrix::PWMDirectMatrix(uint8_t rows, uint8_t cols, uint8_t colors) : 
+    DirectMatrix(rows, cols, colors), Adafruit_GFX(rows, cols) {
 }
 
 void PWMDirectMatrix::drawPixel(int16_t x, int16_t y, uint16_t color) {
@@ -290,7 +364,5 @@ void PWMDirectMatrix::drawPixel(int16_t x, int16_t y, uint16_t color) {
     break;
   }
 
-  // FIXME? this is reversed, I'd expect y * _num_cols + x, but if I do this
-  // Character drawings from the underlying lib are backwards.
   DirectMatrix_MATRIX[y * _num_cols + x] = color;
 }

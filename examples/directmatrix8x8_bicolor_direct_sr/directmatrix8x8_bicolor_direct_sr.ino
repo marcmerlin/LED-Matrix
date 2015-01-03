@@ -16,41 +16,65 @@
     BSD license, all text above must be included in any redistribution
  ****************************************************/
 
-#include <Wire.h>
 #include "LED_Matrix.h"
-#include "Adafruit_GFX.h"
-#include "TimerOne.h"
 
+// I shouldn't have to re-include these libs included in LED_Matrix.h
+// but I get
+// LED_Matrix.h:10:19: fatal error: Wire.h: No such file or directory  #include <Wire.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <TimerOne.h>
+
+#define DEBUG 0
+
+// ----------------------------------------------------------------------------
+#ifndef FASTIO
 #define DATA_PIN 3
 #define CLK_PIN 2
-#define LATCH1_PIN -1
+#define LATCH1_PIN DINV
 #define LATCH2_PIN 13
-#define LATCH3_PIN -1
+#define LATCH3_PIN DINV
 
 // These go to ground:
-uint8_t gnd_line_pins[] = { 5, 6, 7, 8, 12, 11, 10, 9 };
-
+GPIO_pin_t gnd_line_pins[] = { 5, 6, 7, 8, 12, 11, 10, 9 };
 // Those go to V+
 // A6 and A7 do NOT work as digital pins on Arduino Nano
 // Red LEDs are directly connected.
 // Green LEDs are connected via shift register
-uint8_t column_pins[] = {  0,  4, A5, A4, A3, A2, A1, A0,
-                          -1, -1, -1, -1, -1, -1, -1, -1,
-                          -1, -1, -1, -1, -1, -1, -1, -1, };
+GPIO_pin_t column_pins[] = {  0,  4, A5, A4, A3, A2, A1, A0,
+                              DINV, DINV, DINV, DINV, DINV, DINV, DINV, DINV,
+                              DINV, DINV, DINV, DINV, DINV, DINV, DINV, DINV, };
 
-// -1 -> Red is directly connected
+// ----------------------------------------------------------------------------
+#else
+#define DATA_PIN DP3
+#define CLK_PIN DP2
+#define LATCH1_PIN DINV
+#define LATCH2_PIN DP13
+#define LATCH3_PIN DINV
+
+GPIO_pin_t gnd_line_pins[] = { DP5, DP6, DP7, DP8, DP12, DP11, DP10, DP9 };
+
+GPIO_pin_t column_pins[] = {  DP0,  DP4, DP19, DP18, DP17, DP16, DP15, DP14,
+                              DINV, DINV, DINV, DINV, DINV, DINV, DINV, DINV,
+                              DINV, DINV, DINV, DINV, DINV, DINV, DINV, DINV, };
+#endif
+// ----------------------------------------------------------------------------
+
+// DINV -> Red is directly connected
 // LATCH2_PIN -> Latch pin for green
-// -1 -> no blue
-uint8_t sr_pins[] = { -1, LATCH2_PIN, -1, DATA_PIN, CLK_PIN };
+// DINV -> no blue
+GPIO_pin_t sr_pins[] = { DINV, LATCH2_PIN, DINV, DATA_PIN, CLK_PIN };
 
 PWMDirectMatrix *matrix;
 
 void setup() {
-#ifndef __AVR_ATtiny85__
     // Initializing serial breaks one row (shared pin)
-    //Serial.begin(57600);
-    //Serial.println("DirectMatrix Test");
-#endif
+    if (DEBUG) Serial.begin(57600);
+    if (DEBUG) Serial.println("DirectMatrix Test");
+
+    
+
     matrix = new PWMDirectMatrix(8, 8, 2);
     matrix->begin(gnd_line_pins, column_pins, sr_pins);
 }
@@ -86,6 +110,10 @@ static const uint8_t PROGMEM
 
 
 void loop() {
+    if (DEBUG) Serial.print  (F("ISR runtime: "));
+    if (DEBUG) Serial.print  (matrix->ISR_runtime());
+    if (DEBUG) Serial.print  (F(" and latency: "));
+    if (DEBUG) Serial.println(matrix->ISR_latency());
 
     matrix->clear();
     matrix->drawBitmap(0, 0, smile_bmp, 8, 8, LED_RED_HIGH);

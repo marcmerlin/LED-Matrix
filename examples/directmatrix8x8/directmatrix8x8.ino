@@ -1,8 +1,8 @@
 /*************************************************** 
-    This is a library to address LED matrices that requires
+    This is a library to address LED_RED matrices that requires
     constant column/row rescans.
 
-    It uses code from the Adafruit I2C LED backpack library designed for
+    It uses code from the Adafruit I2C LED_RED backpack library designed for
     ----> http://www.adafruit.com/products/881
     ----> http://www.adafruit.com/products/880
     ----> http://www.adafruit.com/products/879
@@ -25,7 +25,7 @@
 uint8_t _gnd_lines[] = { 5, 6, 7, 8, 12, 11, 10, 9 };
 // Those go to V+
 // A6 and A7 do NOT work as digital pins on Arduino Nano
-uint8_t _redcolumns[] = { 0,  4, A5, A4, A3, A2, A1, A0 };
+uint8_t _columns[] = { 0,  4, A5, A4, A3, A2, A1, A0 };
 
 PWMDirectMatrix *matrix;
 
@@ -36,7 +36,7 @@ void setup() {
     //Serial.println("DirectMatrix Test");
 #endif
     matrix = new PWMDirectMatrix(8, 8);
-    matrix->begin(_gnd_lines, _redcolumns);
+    matrix->begin(_gnd_lines, _columns);
 }
 
 static const uint8_t PROGMEM
@@ -72,39 +72,39 @@ static const uint8_t PROGMEM
 void loop() {
 
     matrix->clear();
-    matrix->drawBitmap(0, 0, smile_bmp, 8, 8, LED_HIGH);
+    matrix->drawBitmap(0, 0, smile_bmp, 8, 8, LED_RED_HIGH);
     matrix->writeDisplay();
     delay(1000);
 
     matrix->clear();
-    matrix->drawBitmap(0, 0, neutral_bmp, 8, 8, LED_MEDIUM);
+    matrix->drawBitmap(0, 0, neutral_bmp, 8, 8, LED_RED_MEDIUM);
     matrix->writeDisplay();
     delay(1000);
 
     matrix->clear();
-    matrix->drawBitmap(0, 0, frown_bmp, 8, 8, LED_VERYLOW);
+    matrix->drawBitmap(0, 0, frown_bmp, 8, 8, LED_RED_VERYLOW);
     matrix->writeDisplay();
     delay(1000);
 
     matrix->clear();
-    matrix->drawLine(0,0, 7,7, LED_MEDIUM);
+    matrix->drawLine(0,0, 7,7, LED_RED_MEDIUM);
     matrix->writeDisplay();  // write the changes we just made to the display
     delay(500);
 
     matrix->clear();
-    matrix->drawRect(0,0, 8,8, LED_VERYLOW);
-    matrix->fillRect(2,2, 4,4, LED_HIGH);
+    matrix->drawRect(0,0, 8,8, LED_RED_VERYLOW);
+    matrix->fillRect(2,2, 4,4, LED_RED_HIGH);
     matrix->writeDisplay();  // write the changes we just made to the display
     delay(2000);
 
     matrix->clear();
-    matrix->drawCircle(3,3, 3, LED_MEDIUM);
+    matrix->drawCircle(3,3, 3, LED_RED_MEDIUM);
     matrix->writeDisplay();  // write the changes we just made to the display
     delay(500);
 
     matrix->setTextWrap(false);  // we don't want text to wrap so it scrolls nicely
     matrix->setTextSize(1);
-    matrix->setTextColor(LED_MEDIUM);
+    matrix->setTextColor(LED_RED_MEDIUM);
     matrix->setRotation(1);
     for (int8_t x=7; x>=-36; x--) {
         matrix->clear();
@@ -115,7 +115,7 @@ void loop() {
     }
     delay(100);
     matrix->setRotation(2);
-    matrix->setTextColor(LED_HIGH);
+    matrix->setTextColor(LED_RED_HIGH);
     for (int8_t x=7; x>=-36; x--) {
         matrix->clear();
         matrix->setCursor(x,0);
