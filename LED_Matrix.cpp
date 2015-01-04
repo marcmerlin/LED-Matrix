@@ -201,7 +201,7 @@ void DirectMatrix_RefreshPWMLine(void) {
     // we use 4 ISR frequencies for 16 bits of PWM and keep track of which
     // next interval (powers of 2) we set for next time this ISR should run
     static uint8_t isr_freq_offset = 0;
-    int8_t oldrow = row - 1;
+    int8_t oldrow;
     int8_t col_pin_offset = 0;
     uint16_t pwm_shifted = pwm;
 
@@ -209,9 +209,16 @@ void DirectMatrix_RefreshPWMLine(void) {
     DirectMatrix_ISR_latency = micros() - time;
     time = micros();
 
-    if (row == 0) oldrow = DirectMatrix_ARRAY_ROWS - 1;
-    // Before setting the columns, shut off the previous row
-    digitalWrite(DirectMatrix_ROW_PINS[oldrow], HIGH);
+    // We play a speed trick and only turn off the row before setting the 
+    // columns if we change rows. We however get called several times for
+    // different PWM values and adjust the row intensity for PWM without
+    // turning the column off and on.
+    if (pwm == 1)
+    {
+	if (row == 0) oldrow = DirectMatrix_ARRAY_ROWS - 1; else oldrow = row-1;
+	// Before setting the columns, shut off the previous row
+	digitalWrite(DirectMatrix_ROW_PINS[oldrow], HIGH);
+    }
 
     for (int8_t color = 0; color < DirectMatrix_NUM_COLORS; color++)
     {
@@ -243,23 +250,20 @@ void DirectMatrix_RefreshPWMLine(void) {
     }
 
     // Now that the colums are set, turn the row on
-    digitalWrite(DirectMatrix_ROW_PINS[row], LOW);
+    if (pwm == 1) digitalWrite(DirectMatrix_ROW_PINS[row], LOW);
 
-    row++;
-    if (row >= DirectMatrix_ARRAY_ROWS)
+    pwm <<= 1;
+    isr_freq_offset++;
+    if (pwm >= DirectMatrix_PWM_LEVELS) 
     {
-	row = 0;
-	pwm <<= 1;
-	isr_freq_offset++;
-	if (pwm >= DirectMatrix_PWM_LEVELS) 
-	{
-	    pwm = 1;
-	    isr_freq_offset = 0;
-	}
-	// for 4 bits of PWM, only have 4 interrupts for 16 shades by having
-	// each following interrupt be twice as long.
-	Timer1.setPeriod(DirectMatrix_ISR_FREQ[isr_freq_offset]);
+	pwm = 1;
+	isr_freq_offset = 0;
+	row++;
+	if (row >= DirectMatrix_ARRAY_ROWS) row = 0;
     }
+    // for 4 bits of PWM, only have 4 interrupts for 16 shades by having
+    // each following interrupt be twice as long.
+    Timer1.setPeriod(DirectMatrix_ISR_FREQ[isr_freq_offset]);
 
     // Record how long the function took
     DirectMatrix_ISR_runtime = micros() - time;
