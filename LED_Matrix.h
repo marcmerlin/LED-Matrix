@@ -30,14 +30,14 @@
 
 #define DirectMatrix_PWM_LEVELS 16 // 4 bits done with 4 interrupts per line
 #define LED_RED_VERYLOW 	1
-#define LED_RED_LOW 		2
-#define LED_RED_MEDIUM 		5
-#define LED_RED_HIGH 		7
+#define LED_RED_LOW 		3
+#define LED_RED_MEDIUM 		7
+#define LED_RED_HIGH 		15
 
 #define LED_GREEN_VERYLOW	(1 << 4)
-#define LED_GREEN_LOW 		(2 << 4)
-#define LED_GREEN_MEDIUM 	(5 << 4)
-#define LED_GREEN_HIGH 		(7 << 4)
+#define LED_GREEN_LOW 		(3 << 4)
+#define LED_GREEN_MEDIUM 	(7 << 4)
+#define LED_GREEN_HIGH 		(15 << 4)
 
 #define LED_ORANGE_VERYLOW	(LED_RED_VERYLOW + LED_GREEN_VERYLOW)
 #define LED_ORANGE_LOW		(LED_RED_LOW     + LED_GREEN_LOW)

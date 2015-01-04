@@ -189,6 +189,11 @@ volatile uint32_t DirectMatrix_ISR_latency;
 // - 268ns with 8 direct and 8 via SR (92 + 176) (arduino digitalwrite)
 // - 136ns with 8 direct and 8 via SR (56 +  80) (digitalwrite2)
 // - 104ns with 8 direct and 8 via SR (48 +  56) (digitalwrite2f)
+// 
+// I tried to do all 4 bits of PWM on each row before going to the next row
+// in an attempt to limit the amount of time rows are turned off, but the ISR
+// takes too long and when multipled by 4, it takes too long before a full
+// display refresh.
 void DirectMatrix_RefreshPWMLine(void) {
     static uint32_t time = micros();
     static uint8_t row = 0;
