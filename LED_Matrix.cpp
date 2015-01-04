@@ -188,12 +188,7 @@ volatile uint32_t DirectMatrix_ISR_latency;
 // runtime: 
 // - 268ns with 8 direct and 8 via SR (92 + 176) (arduino digitalwrite)
 // - 136ns with 8 direct and 8 via SR (56 +  80) (digitalwrite2)
-// - 108ns with 8 direct and 8 via SR (48 +  60) (digitalwrite2f)
-// TODO:
-// redo PWM by 
-// 1) for 4 bits of intensity, be called at 400ns 800ns 1600ns and 3200ns (4 times) and turn on or off
-// 2) to save some time with changing rows do each line first before switching to the next line?
-// (allows leaving the line on while turning row pixels on or off)
+// - 104ns with 8 direct and 8 via SR (48 +  56) (digitalwrite2f)
 void DirectMatrix_RefreshPWMLine(void) {
     static uint32_t time = micros();
     static uint8_t row = 0;
@@ -209,16 +204,9 @@ void DirectMatrix_RefreshPWMLine(void) {
     DirectMatrix_ISR_latency = micros() - time;
     time = micros();
 
-    // We play a speed trick and only turn off the row before setting the 
-    // columns if we change rows. We however get called several times for
-    // different PWM values and adjust the row intensity for PWM without
-    // turning the column off and on.
-    if (pwm == 1)
-    {
-	if (row == 0) oldrow = DirectMatrix_ARRAY_ROWS - 1; else oldrow = row-1;
-	// Before setting the columns, shut off the previous row
-	digitalWrite(DirectMatrix_ROW_PINS[oldrow], HIGH);
-    }
+    if (row == 0) oldrow = DirectMatrix_ARRAY_ROWS - 1; else oldrow = row - 1;
+    // Before setting the columns, shut off the previous row
+    digitalWrite(DirectMatrix_ROW_PINS[oldrow], HIGH);
 
     for (int8_t color = 0; color < DirectMatrix_NUM_COLORS; color++)
     {
@@ -250,20 +238,23 @@ void DirectMatrix_RefreshPWMLine(void) {
     }
 
     // Now that the colums are set, turn the row on
-    if (pwm == 1) digitalWrite(DirectMatrix_ROW_PINS[row], LOW);
+    digitalWrite(DirectMatrix_ROW_PINS[row], LOW);
 
-    pwm <<= 1;
-    isr_freq_offset++;
-    if (pwm >= DirectMatrix_PWM_LEVELS) 
+    row++;
+    if (row >= DirectMatrix_ARRAY_ROWS)
     {
-	pwm = 1;
-	isr_freq_offset = 0;
-	row++;
-	if (row >= DirectMatrix_ARRAY_ROWS) row = 0;
+	row = 0;
+	pwm <<= 1;
+	isr_freq_offset++;
+	if (pwm >= DirectMatrix_PWM_LEVELS) 
+	{
+	    pwm = 1;
+	    isr_freq_offset = 0;
+	}
+	// for 4 bits of PWM, only have 4 interrupts for 16 shades by having
+	// each following interrupt be twice as long.
+	Timer1.setPeriod(DirectMatrix_ISR_FREQ[isr_freq_offset]);
     }
-    // for 4 bits of PWM, only have 4 interrupts for 16 shades by having
-    // each following interrupt be twice as long.
-    Timer1.setPeriod(DirectMatrix_ISR_FREQ[isr_freq_offset]);
 
     // Record how long the function took
     DirectMatrix_ISR_runtime = micros() - time;
