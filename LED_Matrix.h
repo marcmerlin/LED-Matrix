@@ -28,7 +28,7 @@
 #define DINV 255 
 #endif
 
-#define DirectMatrix_PWM_LEVELS 7  // 3 bits -> 400 ns refresh with 324ns free
+#define DirectMatrix_PWM_LEVELS 16 // 4 bits done with 4 interrupts per line
 #define LED_RED_VERYLOW 	1
 #define LED_RED_LOW 		2
 #define LED_RED_MEDIUM 		5
@@ -54,7 +54,7 @@
 class DirectMatrix {
  public:
   DirectMatrix(uint8_t, uint8_t, uint8_t);
-  void begin(GPIO_pin_t [], GPIO_pin_t [], GPIO_pin_t []);
+  void begin(GPIO_pin_t [], GPIO_pin_t [], GPIO_pin_t [], uint32_t);
   void writeDisplay(void);
   void clear(void);
   uint32_t ISR_runtime(void);

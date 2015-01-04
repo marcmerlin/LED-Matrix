@@ -175,6 +175,10 @@ volatile GPIO_pin_t *DirectMatrix_COL_PINS;
 volatile GPIO_pin_t *DirectMatrix_SR_PINS;
 // How many colors in the array
 volatile uint8_t DirectMatrix_NUM_COLORS;
+// 4 frequencies for the ISR to make PWM colors
+volatile uint32_t DirectMatrix_ISR_FREQ[4];
+
+// profiling
 volatile uint32_t DirectMatrix_ISR_runtime;
 volatile uint32_t DirectMatrix_ISR_latency;
 
@@ -194,8 +198,10 @@ void DirectMatrix_RefreshPWMLine(void) {
     static uint32_t time = micros();
     static uint8_t row = 0;
     static uint8_t pwm = 1;
+    // we use 4 ISR frequencies for 16 bits of PWM and keep track of which
+    // next interval (powers of 2) we set for next time this ISR should run
+    static uint8_t isr_freq_offset = 0;
     int8_t oldrow = row - 1;
-    int16_t colormask = 0xF;
     int8_t col_pin_offset = 0;
     uint16_t pwm_shifted = pwm;
 
@@ -215,8 +221,8 @@ void DirectMatrix_RefreshPWMLine(void) {
 	    for (int8_t col = 0; col <= DirectMatrix_ARRAY_COLS - 1; col++)
 	    {
 		digitalWrite(DirectMatrix_COL_PINS[col + col_pin_offset],
-		    ((DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] &
-		      colormask) >= pwm_shifted)?HIGH:LOW);
+		    (DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] &
+		     pwm_shifted)?HIGH:LOW);
 	    }
 	}
 	else
@@ -226,13 +232,12 @@ void DirectMatrix_RefreshPWMLine(void) {
 	    {
 		digitalWrite(DirectMatrix_SR_PINS[CLK], LOW);
 		digitalWrite(DirectMatrix_SR_PINS[DATA], 
-		    ((DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] &
-		      colormask) >= pwm_shifted)?HIGH:LOW);
+		    (DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] &
+		     pwm_shifted)?HIGH:LOW);
 		digitalWrite(DirectMatrix_SR_PINS[CLK], HIGH);
 	    }
 	    digitalWrite(DirectMatrix_SR_PINS[color], HIGH);
 	}
-	colormask <<= 4;
 	pwm_shifted <<= 4;
 	col_pin_offset += DirectMatrix_ARRAY_COLS;
     }
@@ -244,8 +249,16 @@ void DirectMatrix_RefreshPWMLine(void) {
     if (row >= DirectMatrix_ARRAY_ROWS)
     {
 	row = 0;
-	pwm++;
-	if (pwm > DirectMatrix_PWM_LEVELS) pwm = 1;
+	pwm <<= 1;
+	isr_freq_offset++;
+	if (pwm >= DirectMatrix_PWM_LEVELS) 
+	{
+	    pwm = 1;
+	    isr_freq_offset = 0;
+	}
+	// for 4 bits of PWM, only have 4 interrupts for 16 shades by having
+	// each following interrupt be twice as long.
+	Timer1.setPeriod(DirectMatrix_ISR_FREQ[isr_freq_offset]);
     }
 
     // Record how long the function took
@@ -274,7 +287,7 @@ DirectMatrix::DirectMatrix(uint8_t num_rows, uint8_t num_cols,
 
 // Array of of pins for vertical lines, and columns.
 void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[], 
-	GPIO_pin_t __sr_pins[]) {
+	GPIO_pin_t __sr_pins[], uint32_t __ISR_freq) {
     _row_pins = __row_pins;
     _col_pins = __col_pins;
     _sr_pins = __sr_pins;
@@ -283,6 +296,10 @@ void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[],
     DirectMatrix_ROW_PINS = _row_pins;
     DirectMatrix_COL_PINS = _col_pins;
     DirectMatrix_SR_PINS = _sr_pins;
+    DirectMatrix_ISR_FREQ[0] = __ISR_freq;
+    DirectMatrix_ISR_FREQ[1] = __ISR_freq << 1;
+    DirectMatrix_ISR_FREQ[2] = __ISR_freq << 2;
+    DirectMatrix_ISR_FREQ[3] = __ISR_freq << 3;
 
     // Init the lines and cols with the opposite voltage to turn them off.
     for (uint8_t i = 0; i < _num_rows; i++)
@@ -319,7 +336,7 @@ void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[],
     // on the matrix size)
     // 400 isn't long enough to make full colors, 1000+ is better
     // but it makes PWM colors blink
-    Timer1.initialize(400);
+    Timer1.initialize(DirectMatrix_ISR_FREQ[0]);
     Timer1.attachInterrupt(DirectMatrix_RefreshPWMLine);
 }
 

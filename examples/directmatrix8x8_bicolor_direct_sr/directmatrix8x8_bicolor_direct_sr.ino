@@ -71,12 +71,15 @@ PWMDirectMatrix *matrix;
 void setup() {
     // Initializing serial breaks one row (shared pin)
     if (DEBUG) Serial.begin(57600);
+    if (DEBUG) while (!Serial);
     if (DEBUG) Serial.println("DirectMatrix Test");
 
-    
-
     matrix = new PWMDirectMatrix(8, 8, 2);
-    matrix->begin(gnd_line_pins, column_pins, sr_pins);
+    // The ISR frequency is doubled 3 times to create 4 PWM values
+    // and will run at x, x*2, x*4, x*16 to simulate 16 levels of
+    // intensity without causing 16 interrupts at x, leaving more
+    // time for the main loop and causing less intensity loss.
+    matrix->begin(gnd_line_pins, column_pins, sr_pins, 200);
 }
 
 static const uint8_t PROGMEM
@@ -109,45 +112,60 @@ static const uint8_t PROGMEM
         B00111100 };
 
 
-void loop() {
+void show_isr() {
     if (DEBUG) Serial.print  (F("ISR runtime: "));
     if (DEBUG) Serial.print  (matrix->ISR_runtime());
     if (DEBUG) Serial.print  (F(" and latency: "));
     if (DEBUG) Serial.println(matrix->ISR_latency());
+}
 
+void loop() {
+    show_isr();
+    matrix->clear();
+    matrix->drawLine(0,2, 7,2, LED_RED_VERYLOW);
+    matrix->drawLine(0,3, 7,3, LED_RED_LOW);
+    matrix->drawLine(0,4, 7,4, LED_RED_MEDIUM);
+    matrix->drawLine(0,5, 7,5, LED_RED_HIGH);
+    matrix->drawLine(2,0, 2,7, LED_GREEN_VERYLOW);
+    matrix->drawLine(3,0, 3,7, LED_GREEN_LOW);
+    matrix->drawLine(4,0, 4,7, LED_GREEN_MEDIUM);
+    matrix->drawLine(5,0, 5,7, LED_GREEN_HIGH);
+    matrix->writeDisplay();
+    delay(4000);
+
+    show_isr();
     matrix->clear();
     matrix->drawBitmap(0, 0, smile_bmp, 8, 8, LED_RED_HIGH);
     matrix->writeDisplay();
     delay(1000);
 
+    show_isr();
     matrix->clear();
     matrix->drawBitmap(0, 0, neutral_bmp, 8, 8, LED_GREEN_HIGH);
     matrix->writeDisplay();
     delay(1000);
 
+    show_isr();
     matrix->clear();
     matrix->drawBitmap(0, 0, frown_bmp, 8, 8, LED_ORANGE_HIGH);
     matrix->writeDisplay();
     delay(1000);
 
-    matrix->clear();
-    matrix->drawLine(0,0, 7,7, LED_GREEN_LOW);
-    matrix->writeDisplay();  // write the changes we just made to the display
-    delay(500);
-
+    show_isr();
     matrix->clear();
     matrix->drawRect(0,0, 8,8, LED_ORANGE_HIGH);
     matrix->drawRect(1,1, 6,6, LED_GREEN_MEDIUM);
     matrix->fillRect(2,2, 4,4, LED_RED_HIGH);
-    matrix->writeDisplay();  // write the changes we just made to the display
+    matrix->writeDisplay();
     delay(3000);
 
+    show_isr();
     matrix->clear();
     matrix->drawCircle(3,3, 3, LED_RED_MEDIUM);
-    matrix->writeDisplay();  // write the changes we just made to the display
+    matrix->writeDisplay();
     delay(500);
 
-    matrix->setTextWrap(false);  // we don't want text to wrap so it scrolls nicely
+    matrix->setTextWrap(false);  // we don't wrap text so it scrolls nicely
     matrix->setTextSize(1);
     matrix->setTextColor(LED_GREEN_HIGH);
     matrix->setRotation(3);
