@@ -79,7 +79,7 @@ void setup() {
     // and will run at x, x*2, x*4, x*16 to simulate 16 levels of
     // intensity without causing 16 interrupts at x, leaving more
     // time for the main loop and causing less intensity loss.
-    matrix->begin(gnd_line_pins, column_pins, sr_pins, 200);
+    matrix->begin(gnd_line_pins, column_pins, sr_pins, 150);
 }
 
 static const uint8_t PROGMEM
