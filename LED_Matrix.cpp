@@ -80,7 +80,16 @@ void DirectMatrix_RefreshPWMLine(void) {
     DirectMatrix_ISR_latency = micros() - time;
     time = micros();
 
-    if (row == 0) oldrow = DirectMatrix_ARRAY_ROWS - 1; else oldrow = row - 1;
+    if (row == 0) 
+    {
+	// When scanning a new row, set the new timer frequency for this run.
+	Timer1.setPeriod(DirectMatrix_ISR_FREQ[isr_freq_offset]);
+	oldrow = DirectMatrix_ARRAY_ROWS - 1;
+    }
+    else 
+    {
+	oldrow = row - 1;
+    }
     // Before setting the columns, shut off the previous row
     digitalWrite(DirectMatrix_ROW_PINS[oldrow], HIGH);
 
@@ -127,9 +136,6 @@ void DirectMatrix_RefreshPWMLine(void) {
 	    pwm = 1;
 	    isr_freq_offset = 0;
 	}
-	// for 4 bits of PWM, only have 4 interrupts for 16 shades by having
-	// each following interrupt be twice as long.
-	Timer1.setPeriod(DirectMatrix_ISR_FREQ[isr_freq_offset]);
     }
 
     // Record how long the function took
