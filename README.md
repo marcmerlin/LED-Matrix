@@ -2,7 +2,7 @@ LED-Matrix
 ==========
 
 Single/bi/tri-color LED Matrix PWM driver for arduino (direct IO or Shift Register connected)
-![](/demo/snap3.jpg?raw=true)
+![](/screenshots/snap3.jpg?raw=true)
 
 This code implements equivalent and additional functionality from what you get from Adafruit's 
 https://github.com/adafruit/Adafruit-LED-Backpack-Library
