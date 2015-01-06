@@ -17,6 +17,15 @@
   By Marc MERLIN <marc_soft@merlins.org>
 
   License: Apache 2.0 or MIT, at your choice.
+
+  Required libraries:
+  - TimerOne: https://www.pjrc.com/teensy/td_libs_TimerOne.html
+  - Adafruit-GFX: https://github.com/marcmerlin/Adafruit-GFX-Library
+  - http://www.codeproject.com/Articles/732646/Fast-digital-I-O-for-Arduino
+    (this is not required, but makes things 3x faster)
+
+  
+
  ****************************************************/
 
 #ifdef __AVR_ATtiny85__
@@ -207,12 +216,10 @@ void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[],
 	digitalWrite(_sr_pins[pin], HIGH);
     }
 
-    // We want 40Hz refresh at lowest intensity  
-    // x 8 rows x 7 levels of intensity -> 2240Hz or 446us
-    // TODO: dynamically calculate the ISR frequency based
-    // on the matrix size)
-    // 400 isn't long enough to make full colors, 1000+ is better
-    // but it makes PWM colors blink
+    // We want at least 40Hz refresh at lowest intensity  
+    // x 8 rows x 16 levels of intensity -> 5120Hz or 195us
+    // I get good results by making the quickest interrupt be
+    // 150us, and 300, 600, 1200us for the other ones.
     Timer1.initialize(DirectMatrix_ISR_FREQ[0]);
     Timer1.attachInterrupt(DirectMatrix_RefreshPWMLine);
 }
