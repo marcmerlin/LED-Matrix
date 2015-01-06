@@ -77,9 +77,9 @@ void setup() {
     // and will run at x, x*2, x*4, x*16 to simulate 16 levels of
     // intensity without causing 16 interrupts at x, leaving more
     // time for the main loop and causing less intensity loss.
-    // 200 flickers a bit for me due to the 1600us 4th scan, 150 removes
+    // 200 flickers a bit for me due to the 1600us 4th scan, 200 removes
     // the flicker for my eyes.
-    matrix->begin(gnd_line_pins, column_pins, sr_pins, 150);
+    matrix->begin(gnd_line_pins, column_pins, sr_pins, 200);
 }
 
 static const uint8_t PROGMEM
@@ -131,6 +131,12 @@ void show_isr() {
 }
 
 void loop() {
+    show_isr();
+    matrix->clear();
+    matrix->fillRect(0,0, 8,8, LED_RED_HIGH);
+    matrix->writeDisplay();
+    delay(3000);
+
     for (uint8_t i=0; i<=0; i++)
     {
 	show_isr();
