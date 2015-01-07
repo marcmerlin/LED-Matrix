@@ -245,22 +245,21 @@ PWMDirectMatrix::PWMDirectMatrix(uint8_t rows, uint8_t cols, uint8_t colors) :
 }
 
 void PWMDirectMatrix::drawPixel(int16_t x, int16_t y, uint16_t color) {
-  // TODO: we should support more than 8x8, so change this
-  if ((y < 0) || (y >= 8)) return;
-  if ((x < 0) || (x >= 8)) return;
+  if ((y < 0) || (y >= _num_rows)) return;
+  if ((x < 0) || (x >= _num_cols)) return;
 
   switch (getRotation()) {
   case 1:
     swap(x, y);
-    x = 8 - x - 1;
+    x = _num_cols - x - 1;
     break;
   case 2:
-    x = 8 - x - 1;
-    y = 8 - y - 1;
+    x = _num_cols - x - 1;
+    y = _num_rows - y - 1;
     break;
   case 3:
     swap(x, y);
-    y = 8 - y - 1;
+    y = _num_rows - y - 1;
     break;
   }
 

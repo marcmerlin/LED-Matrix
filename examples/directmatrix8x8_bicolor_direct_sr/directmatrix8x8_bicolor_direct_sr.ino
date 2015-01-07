@@ -1,5 +1,5 @@
 /*************************************************** 
-    This is a library to address LED matrices that requires
+    Tests for library LED-Matrix written for LED matrices that requires
     constant column/row rescans.
 
     It uses code from the Adafruit I2C LED backpack library designed for
