@@ -2,9 +2,8 @@
   This library was heavily inspired from Adafruit's LED-Backpack-Library
   written by Limor Fried/Ladyada for Adafruit Industries.  
 
-  It was originally designed for these products:
-  ----> http://www.adafruit.com/products/
-  ----> http://www.adafruit.com/products/
+  It was originally designed for products like these:
+  ----> http://www.adafruit.com/products/902
 
   I used the library shell to write my own library to support LED Matrices
   directly addressed with an X/Y pin matrix like this one:
