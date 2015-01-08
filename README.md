@@ -26,6 +26,10 @@ solutions, they are much simpler for you and leave CPU time and IO pins on the a
 But if you already have raw LED matrices with no driver chip, this code is for you.
 Note that if you buy a MAX7219 driver chip, you'll have the same problem than the adafruit solution
 and will not be able to mix colors intensities.
+I've found that this newer chip 
+http://www.maximintegrated.com/en/products/power/display-power-control/MAX6961.html
+can do bi color and 4 step PWM (not as good as my code, but not bad). You may still want to
+look at a MAX6960.
 
 Pluses for my solution:
 - supports single/bi/tri-color LED matrices
