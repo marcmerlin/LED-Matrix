@@ -2,6 +2,9 @@ LED-Matrix
 ==========
 
 Single/bi/tri-color LED Matrix PWM driver for arduino (direct IO or Shift Register connected)
+
+Blog post with video: http://marc.merlins.org/perso/arduino/post_2015-01-06_Driver-for-direct-driving-single-to-3-color-LED-Matrices-with-software-PWM.html
+
 ![](/screenshots/snap3.jpg?raw=true)
 
 This code implements equivalent and additional functionality from what you get from Adafruit's 
