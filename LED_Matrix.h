@@ -53,7 +53,7 @@
 
 class DirectMatrix {
  public:
-  DirectMatrix(uint8_t, uint8_t, uint8_t);
+  DirectMatrix(uint8_t, uint8_t, uint8_t, uint8_t);
   void begin(GPIO_pin_t [], GPIO_pin_t [], GPIO_pin_t [], uint32_t);
   void writeDisplay(void);
   void clear(void);
@@ -74,6 +74,7 @@ class DirectMatrix {
 
 class PWMDirectMatrix : public DirectMatrix, public Adafruit_GFX {
  public:
+  PWMDirectMatrix(uint8_t, uint8_t, uint8_t, uint8_t);
   PWMDirectMatrix(uint8_t, uint8_t, uint8_t);
 
   void drawPixel(int16_t x, int16_t y, uint16_t color);

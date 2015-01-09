@@ -40,6 +40,10 @@
 
 // Globals required to pass matrix data into the ISR.
 // (volatile is required for ISRs)
+volatile uint8_t ROW_OFF;
+volatile uint8_t ROW_ON;
+volatile uint8_t COL_ON;
+volatile uint8_t COL_OFF;
 volatile uint8_t DirectMatrix_ARRAY_ROWS;
 volatile uint8_t DirectMatrix_ARRAY_COLS;
 volatile uint16_t *DirectMatrix_MATRIX;
@@ -59,7 +63,7 @@ volatile uint32_t DirectMatrix_ISR_runtime;
 volatile uint32_t DirectMatrix_ISR_latency;
 
 
-// ISR to refresh one matrix line
+// ISR to refresh one matrix row
 // This must be fast since it blocks interrupts and can only use globals.
 // runtime: 
 // - 268ns with 8 direct and 8 via SR (92 + 176) (arduino digitalwrite)
@@ -99,7 +103,7 @@ void DirectMatrix_RefreshPWMLine(void) {
 	oldrow = row - 1;
     }
     // Before setting the columns, shut off the previous row
-    digitalWrite(DirectMatrix_ROW_PINS[oldrow], HIGH);
+    digitalWrite(DirectMatrix_ROW_PINS[oldrow], ROW_OFF);
 
     for (int8_t color = 0; color < DirectMatrix_NUM_COLORS; color++)
     {
@@ -110,7 +114,7 @@ void DirectMatrix_RefreshPWMLine(void) {
 	    {
 		digitalWrite(DirectMatrix_COL_PINS[col + col_pin_offset],
 		    (DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] &
-		     pwm_shifted)?HIGH:LOW);
+		     pwm_shifted)?COL_ON:COL_OFF);
 	    }
 	}
 	else
@@ -121,7 +125,7 @@ void DirectMatrix_RefreshPWMLine(void) {
 		digitalWrite(DirectMatrix_SR_PINS[CLK], LOW);
 		digitalWrite(DirectMatrix_SR_PINS[DATA], 
 		    (DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] &
-		     pwm_shifted)?HIGH:LOW);
+		     pwm_shifted)?COL_ON:COL_OFF);
 		digitalWrite(DirectMatrix_SR_PINS[CLK], HIGH);
 	    }
 	    digitalWrite(DirectMatrix_SR_PINS[color], HIGH);
@@ -131,7 +135,7 @@ void DirectMatrix_RefreshPWMLine(void) {
     }
 
     // Now that the colums are set, turn the row on
-    digitalWrite(DirectMatrix_ROW_PINS[row], LOW);
+    digitalWrite(DirectMatrix_ROW_PINS[row], ROW_ON);
 
     row++;
     if (row >= DirectMatrix_ARRAY_ROWS)
@@ -152,7 +156,7 @@ void DirectMatrix_RefreshPWMLine(void) {
 }
 
 DirectMatrix::DirectMatrix(uint8_t num_rows, uint8_t num_cols, 
-	uint8_t num_colors) {
+	uint8_t num_colors, uint8_t common) {
     _num_rows = num_rows;
     _num_cols = num_cols;
 
@@ -160,6 +164,21 @@ DirectMatrix::DirectMatrix(uint8_t num_rows, uint8_t num_cols,
     DirectMatrix_ARRAY_ROWS = num_rows;
     DirectMatrix_ARRAY_COLS = num_cols;
     DirectMatrix_NUM_COLORS = num_colors;
+
+    if (not common)
+    {
+	ROW_OFF = HIGH;
+	ROW_ON = LOW;
+	COL_OFF = LOW;
+	COL_ON = HIGH;
+    }
+    else
+    {
+	ROW_OFF = LOW;
+	ROW_ON = HIGH;
+	COL_OFF = HIGH;
+	COL_ON = LOW;
+    }
 
     if (! (_matrix = (uint16_t *) malloc(num_rows * num_cols * 2)))
     {
@@ -170,7 +189,7 @@ DirectMatrix::DirectMatrix(uint8_t num_rows, uint8_t num_cols,
     DirectMatrix_MATRIX = _matrix;
 }
 
-// Array of of pins for vertical lines, and columns.
+// Array of of pins for vertical rows, and columns.
 void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[], 
 	GPIO_pin_t __sr_pins[], uint32_t __ISR_freq) {
     _row_pins = __row_pins;
@@ -186,16 +205,16 @@ void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[],
     DirectMatrix_ISR_FREQ[2] = __ISR_freq << 2;
     DirectMatrix_ISR_FREQ[3] = __ISR_freq << 3;
 
-    // Init the lines and cols with the opposite voltage to turn them off.
+    // Init the rows and cols with the opposite voltage to turn them off.
     for (uint8_t i = 0; i < _num_rows; i++)
     {
 	pinMode(_row_pins[i], OUTPUT);
-	digitalWrite(_row_pins[i], HIGH);
+	digitalWrite(_row_pins[i], ROW_OFF);
     }
     for (uint8_t i = 0; i < _num_cols; i++)
     {
 	pinMode(_col_pins[i], OUTPUT);
-	digitalWrite(_col_pins[i], LOW);
+	digitalWrite(_col_pins[i], COL_OFF);
     }
     
     // Setup SR pins if any.
@@ -209,7 +228,7 @@ void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[],
 	for (uint8_t i = 0; i <= _num_rows; i++)
 	{
 	    digitalWrite(_sr_pins[CLK], LOW);
-	    digitalWrite(_sr_pins[DATA], i & 1);
+	    digitalWrite(_sr_pins[DATA], 0);
 	    digitalWrite(_sr_pins[CLK], HIGH);
 	}
 	digitalWrite(_sr_pins[pin], HIGH);
@@ -240,8 +259,15 @@ uint32_t DirectMatrix::ISR_latency(void) {
   return DirectMatrix_ISR_latency;
 }
 
+// If common pins are cathode, set common to 0, otherwise 1.
+PWMDirectMatrix::PWMDirectMatrix(uint8_t rows, uint8_t cols, uint8_t colors, 
+		uint8_t common) : 
+    DirectMatrix(rows, cols, colors, common), Adafruit_GFX(rows, cols) {
+}
+
+// Default is common cathode.
 PWMDirectMatrix::PWMDirectMatrix(uint8_t rows, uint8_t cols, uint8_t colors) : 
-    DirectMatrix(rows, cols, colors), Adafruit_GFX(rows, cols) {
+    DirectMatrix(rows, cols, colors, 0), Adafruit_GFX(rows, cols) {
 }
 
 void PWMDirectMatrix::drawPixel(int16_t x, int16_t y, uint16_t color) {

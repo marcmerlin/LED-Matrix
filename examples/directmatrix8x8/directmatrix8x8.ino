@@ -36,7 +36,7 @@
 #define LATCH3_PIN DINV
 
 // These go to ground:
-GPIO_pin_t gnd_line_pins[] = { 5, 6, 7, 8, 12, 11, 10, 9 };
+GPIO_pin_t line_pins[] = { 5, 6, 7, 8, 12, 11, 10, 9 };
 // Those go to V+
 // A6 and A7 do NOT work as digital pins on Arduino Nano
 // Red LEDs are directly connected.
@@ -53,7 +53,7 @@ GPIO_pin_t column_pins[] = {  0,  4, A5, A4, A3, A2, A1, A0,
 #define LATCH2_PIN DINV
 #define LATCH3_PIN DINV
 
-GPIO_pin_t gnd_line_pins[] = { DP5, DP6, DP7, DP8, DP12, DP11, DP10, DP9 };
+GPIO_pin_t line_pins[] = { DP5, DP6, DP7, DP8, DP12, DP11, DP10, DP9 };
 
 GPIO_pin_t column_pins[] = {  DP0,  DP4, DP19, DP18, DP17, DP16, DP15, DP14,
                               DINV, DINV, DINV, DINV, DINV, DINV, DINV, DINV,
@@ -79,7 +79,7 @@ void setup() {
     // time for the main loop and causing less intensity loss.
     // 200 flickers a bit for me due to the 1600us 4th scan, 200 removes
     // the flicker for my eyes.
-    matrix->begin(gnd_line_pins, column_pins, sr_pins, 200);
+    matrix->begin(line_pins, column_pins, sr_pins, 200);
 }
 
 static const uint8_t PROGMEM

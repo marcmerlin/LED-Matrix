@@ -18,7 +18,7 @@ are left on without scanning vs the brightness under scan
 #define LATCH2_PIN DP13
 #define LATCH3_PIN DINV
 
-GPIO_pin_t gnd_line_pins[] = { DP5, DP6, DP7, DP8, DP12, DP11, DP10, DP9 };
+GPIO_pin_t line_pins[] = { DP5, DP6, DP7, DP8, DP12, DP11, DP10, DP9 };
 
 GPIO_pin_t column_pins[] = {  DP0,  DP4, DP19, DP18, DP17, DP16, DP15, DP14,
                               DINV, DINV, DINV, DINV, DINV, DINV, DINV, DINV,
@@ -35,8 +35,8 @@ void setup() {
     // Turn on all the LEDs
     for (uint8_t i = 0; i <= 8; i++)
     {
-	pinMode(gnd_line_pins[i], OUTPUT);
-	digitalWrite(gnd_line_pins[i], LOW);
+	pinMode(line_pins[i], OUTPUT);
+	digitalWrite(line_pins[i], LOW);
     }
     for (uint8_t i = 0; i <= 8; i++)
     {
@@ -47,7 +47,7 @@ void setup() {
     delay(1000);
 
     matrix = new PWMDirectMatrix(8, 8, 2);
-    matrix->begin(gnd_line_pins, column_pins, sr_pins, 200);
+    matrix->begin(line_pins, column_pins, sr_pins, 200);
 
     matrix->clear();
     matrix->fillRect(0,0, 8,8, LED_RED_HIGH);
