@@ -64,6 +64,7 @@ class DirectMatrix {
  protected:
   uint8_t _num_rows;
   uint8_t _num_cols;
+  uint8_t _num_colors;
  
  private:
   GPIO_pin_t *_row_pins;

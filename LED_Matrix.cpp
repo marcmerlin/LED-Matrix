@@ -117,6 +117,19 @@ void DirectMatrix_RefreshPWMLine(void) {
 		     pwm_shifted)?COL_ON:COL_OFF);
 	    }
 	}
+	else if (DirectMatrix_SR_PINS[color] > 32768)
+	{
+	    digitalWrite((GPIO_pin_t) -DirectMatrix_SR_PINS[color], LOW);
+	    for (int8_t col = DirectMatrix_ARRAY_COLS - 1; col >= 0; col--)
+	    {
+		digitalWrite(DirectMatrix_SR_PINS[CLK], LOW);
+		digitalWrite(DirectMatrix_SR_PINS[DATA], 
+		    (DirectMatrix_MATRIX[row * DirectMatrix_ARRAY_COLS + col] &
+		     pwm_shifted)?COL_ON:COL_OFF);
+		digitalWrite(DirectMatrix_SR_PINS[CLK], HIGH);
+	    }
+	    digitalWrite((GPIO_pin_t) -DirectMatrix_SR_PINS[color], HIGH);
+	}
 	else
 	{
 	    digitalWrite(DirectMatrix_SR_PINS[color], LOW);
@@ -159,6 +172,7 @@ DirectMatrix::DirectMatrix(uint8_t num_rows, uint8_t num_cols,
 	uint8_t num_colors, uint8_t common) {
     _num_rows = num_rows;
     _num_cols = num_cols;
+    _num_colors = num_colors;
 
     // These need to be global so that the ISR can get to them.
     DirectMatrix_ARRAY_ROWS = num_rows;
@@ -190,6 +204,8 @@ DirectMatrix::DirectMatrix(uint8_t num_rows, uint8_t num_cols,
 }
 
 // Array of of pins for vertical rows, and columns.
+// __sr_pins can have negative values to fill rows backwards if you wired
+// in that order.
 void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[], 
 	GPIO_pin_t __sr_pins[], uint32_t __ISR_freq) {
     _row_pins = __row_pins;
@@ -211,27 +227,46 @@ void DirectMatrix::begin(GPIO_pin_t __row_pins[], GPIO_pin_t __col_pins[],
 	pinMode(_row_pins[i], OUTPUT);
 	digitalWrite(_row_pins[i], ROW_OFF);
     }
-    for (uint8_t i = 0; i < _num_cols; i++)
-    {
-	pinMode(_col_pins[i], OUTPUT);
-	digitalWrite(_col_pins[i], COL_OFF);
-    }
     
-    // Setup SR pins if any.
-    for (uint8_t pin = 0; pin < 3; pin++)
+    // Setup output pins.
+    for (uint8_t color = 0; color < _num_colors; color++)
     {
-	if (_sr_pins[pin] == 255) continue;
-	pinMode(_sr_pins[pin], OUTPUT);
-	pinMode(_sr_pins[DATA], OUTPUT);
-	pinMode(_sr_pins[CLK], OUTPUT);
-	digitalWrite(_sr_pins[pin], LOW);
-	for (uint8_t i = 0; i <= _num_rows; i++)
+	if (_sr_pins[color] == DINV) 
 	{
-	    digitalWrite(_sr_pins[CLK], LOW);
-	    digitalWrite(_sr_pins[DATA], 0);
-	    digitalWrite(_sr_pins[CLK], HIGH);
+	    for (uint8_t i = 0; i < _num_cols; i++)
+	    {
+		pinMode(_col_pins[color * _num_rows + i], OUTPUT);
+		digitalWrite(_col_pins[color * _num_rows + i], COL_OFF);
+	    }
 	}
-	digitalWrite(_sr_pins[pin], HIGH);
+	else if (_sr_pins[color] > 32768)
+	{
+	    pinMode((GPIO_pin_t) -_sr_pins[color], OUTPUT);
+	    pinMode(_sr_pins[DATA], OUTPUT);
+	    pinMode(_sr_pins[CLK], OUTPUT);
+	    digitalWrite((GPIO_pin_t) -_sr_pins[color], LOW);
+	    for (uint8_t i = 0; i <= _num_rows; i++)
+	    {
+		digitalWrite(_sr_pins[CLK], LOW);
+		digitalWrite(_sr_pins[DATA], COL_OFF);
+		digitalWrite(_sr_pins[CLK], HIGH);
+	    }
+	    digitalWrite((GPIO_pin_t) -_sr_pins[color], HIGH);
+	}
+	else
+	{
+	    pinMode(_sr_pins[color], OUTPUT);
+	    pinMode(_sr_pins[DATA], OUTPUT);
+	    pinMode(_sr_pins[CLK], OUTPUT);
+	    digitalWrite(_sr_pins[color], LOW);
+	    for (uint8_t i = 0; i <= _num_rows; i++)
+	    {
+		digitalWrite(_sr_pins[CLK], LOW);
+		digitalWrite(_sr_pins[DATA], COL_OFF);
+		digitalWrite(_sr_pins[CLK], HIGH);
+	    }
+	    digitalWrite(_sr_pins[color], HIGH);
+	}
     }
 
     // We want at least 40Hz refresh at lowest intensity  
