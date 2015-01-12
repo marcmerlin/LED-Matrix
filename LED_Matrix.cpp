@@ -65,10 +65,13 @@ volatile uint32_t DirectMatrix_ISR_latency;
 
 // ISR to refresh one matrix row
 // This must be fast since it blocks interrupts and can only use globals.
-// runtime: 
+// runtime. On Nano V3, for 2 colors:
 // - 268ns with 8 direct and 8 via SR (92 + 176) (arduino digitalwrite)
 // - 136ns with 8 direct and 8 via SR (56 +  80) (digitalwrite2)
 // - 104ns with 8 direct and 8 via SR (48 +  56) (digitalwrite2f)
+//
+// For 3 colors (nano v3):
+// - 160ns with 1x direct, 2x SR with digitalwrite2f
 //
 // PWM is done with binary code modulation as per 
 // http://www.batsocks.co.uk/readme/art_bcm_1.htm
