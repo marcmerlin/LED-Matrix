@@ -23,8 +23,6 @@
   - http://www.codeproject.com/Articles/732646/Fast-digital-I-O-for-Arduino
     (this is not required, but makes things 3x faster)
 
-  
-
  ****************************************************/
 
 #ifdef __AVR_ATtiny85__
@@ -35,8 +33,6 @@
 #endif
 #include "LED_Matrix.h"
 #include "Adafruit_GFX.h"
-
-/*********************** PWM DIRECT MATRIX OBJECT */
 
 // Globals required to pass matrix data into the ISR.
 // (volatile is required for ISRs)
