@@ -7,6 +7,10 @@ Blog post with video: http://marc.merlins.org/perso/arduino/post_2015-01-06_Driv
 
 ![](/screenshots/snap3.jpg?raw=true)
 
+![](/screenshots/snap3_2.jpg?raw=true)
+
+![](/screenshots/snap3_1.jpg?raw=true)
+
 This code implements equivalent and additional functionality from what you get from Adafruit's 
 https://github.com/adafruit/Adafruit-LED-Backpack-Library
 
@@ -38,7 +42,9 @@ Pluses for my solution:
 - if you don't value your time, it's cheaper :)
 - works with any raw LED matrix, including
   - https://www.sparkfun.com/products/682 (bi-color)
-  - https://www.sparkfun.com/products/683 (tri-color)
+  - https://www.sparkfun.com/products/683 (tri-color) (note that the tricolor
+    matrix can be had for just $5 from hobbyking: 
+    http://www.hobbyking.com/hobbyking/preserve/__37852__Arduino_Tri_Color_RGB_LED_Dot_Matrix.html )
 
 Minuses for my solution:
 - my driver does all the work in software, and requires sequencing interrupts every 
