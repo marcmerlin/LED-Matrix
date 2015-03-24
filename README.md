@@ -58,5 +58,7 @@ Minuses for my solution:
 Required libraries:
 - TimerOne: https://www.pjrc.com/teensy/td_libs_TimerOne.html
 - Adafruit-GFX: https://github.com/adafruit/Adafruit-GFX-Library
+  (actually you'll want my fork until they accept my simple patch:
+  https://github.com/marcmerlin/Adafruit-GFX-Library )
 - http://www.codeproject.com/Articles/732646/Fast-digital-I-O-for-Arduino
   (this is not required, but makes things 3x faster)
