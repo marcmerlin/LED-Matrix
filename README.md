@@ -56,6 +56,7 @@ Minuses for my solution:
 - my driver also uses Timer1 (which means you can't easily use PWM 9 and 10)
 
 Required libraries:
+-------------------
 - TimerOne: https://www.pjrc.com/teensy/td_libs_TimerOne.html
 - My fork of Adafruit-GFX: https://github.com/marcmerlin/Adafruit-GFX-Library because of
   this small patch https://github.com/adafruit/Adafruit-GFX-Library/pull/39 
