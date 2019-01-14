@@ -42,9 +42,7 @@ Pluses for my solution:
 - if you don't value your time, it's cheaper :)
 - works with any raw LED matrix, including
   - https://www.sparkfun.com/products/682 (bi-color)
-  - https://www.sparkfun.com/products/683 (tri-color) (note that the tricolor
-    matrix can be had for just $5 from hobbyking: 
-    http://www.hobbyking.com/hobbyking/preserve/__37852__Arduino_Tri_Color_RGB_LED_Dot_Matrix.html )
+  - https://www.sparkfun.com/products/683 (tri-color) 
 
 Minuses for my solution:
 - my driver does all the work in software, and requires sequencing interrupts every 
